@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+const base=process.env.GAME_TEST_URL||'http://127.0.0.1:8787';
+async function post(action,seat={},extra={},ok=true){const res=await fetch(base+'/api/game',{method:'POST',headers:{'Content-Type':'application/json',...(seat.token?{Authorization:'Bearer '+seat.token}:{})},body:JSON.stringify({action,code:seat.code,requestId:crypto.randomUUID(),...extra})});const data=await res.json();if(ok)assert.equal(res.ok,true,action+': '+data.error);else assert.equal(res.ok,false,action+' should fail');return data;}
+async function get(s){const res=await fetch(base+'/api/game?code='+s.code,{headers:{Authorization:'Bearer '+s.token}});assert.equal(res.status,200);return res.json();}
+const created=await post('create',{}, {name:'TestHost'});const host={token:created.token,code:created.room.code};
+assert.match(host.code,/^[A-Z0-9]{10}$/);
+await post('lock',host);await post('join',{code:host.code},{name:'Blocked'},false);await post('lock',host);
+const joins=await Promise.all(['TestB','TestC','TestD'].map(name=>post('join',{code:host.code},{name})));
+const seats=[host,...joins.map(j=>({code:host.code,token:j.token}))];
+assert.equal((await get(host)).players.length,4);
+await post('join',{code:host.code},{name:'TestB'},false);
+await post('settings',seats[1],{category:'Food',imposters:1,hint:false},false);
+await post('start',host,{},false);
+await Promise.all(seats.map(s=>post('ready',s)));
+await post('start',host);
+let views=await Promise.all(seats.map(get));
+assert.equal(views.filter(v=>v.role==='imposter').length,1);
+const spyIndex=views.findIndex(v=>v.role==='imposter');const word=views.find(v=>v.role==='crewmate').word;
+assert.equal(views[spyIndex].word,null);assert.deepEqual(views[spyIndex].spies,[]);
+assert(!JSON.stringify(views[spyIndex]).includes(word));
+await post('clue',seats[views.findIndex(v=>v.role==='crewmate')],{text:word},false);
+await post('clue',seats[0],{text:'connection'});
+assert.deepEqual((await get(seats[1])).clues,{});
+await Promise.all(seats.slice(1).map((s,i)=>post('clue',s,{text:['texture','memory','feeling'][i]})));
+assert.equal((await get(host)).phase,'discuss');
+const chatId=crypto.randomUUID();await post('chat',host,{text:'Test message',requestId:chatId});await post('chat',host,{text:'Test message',requestId:chatId});assert.equal((await get(host)).chat.length,1);
+await post('openVote',host);const spy=views[spyIndex].me;const crew=views.find(v=>v.role==='crewmate').me;
+await Promise.all(seats.map((s,i)=>post('vote',s,{target:i===spyIndex?crew:spy})));
+const result=await get(host);assert.equal(result.phase,'result');assert.equal(result.winner,'Crewmates');assert.equal(result.word,word);
+await post('lobby',host);await Promise.all(seats.map(s=>post('ready',s)));await post('start',host);await post('skip',host);
+views=await Promise.all(seats.map(get));assert.equal(views[0].phase,'clue');assert.equal(views.filter(v=>v.role==='imposter').length,1);
+await Promise.all(seats.map(s=>post('clue',s,{text:'association'})));await post('openVote',host);await Promise.all(seats.map(s=>post('vote',s,{target:'skip'})));
+assert.equal((await get(host)).round,2);assert.equal((await get(host)).phase,'clue');
+const unauthorized=await fetch(base+'/api/game?code='+host.code);assert.equal(unauthorized.status,400);
+const practice=await post('create',{}, {name:'PracticeA'});const pa={code:practice.room.code,token:practice.token};const pj=await post('join',{code:pa.code},{name:'PracticeB'});const pb={code:pa.code,token:pj.token};await post('ready',pa);await post('ready',pb);await post('start',pa);await post('clue',pa,{text:'association'});await post('clue',pb,{text:'memory'});await post('openVote',pa);await post('vote',pa,{target:'skip'});await post('vote',pb,{target:'skip'});assert.equal((await get(pa)).winner,'Practice complete');await post('lobby',pa);await post('leave',pa);assert.equal((await get(pb)).host,(await get(pb)).me);
+console.log('PASS: four independent sessions, concurrent joining/clues/votes, secret isolation, host authorization, room lock, duplicate names, readiness, replay safety, crew win, rematch, word replacement, abstention, two-player practice, host transfer, and authentication.');
