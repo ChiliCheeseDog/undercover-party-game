@@ -1,0 +1,2 @@
+import {env} from 'cloudflare:workers';
+export async function GET(_req:Request,{params}:{params:Promise<{id:string}>}){const {id}=await params;if(!/^[a-f0-9-]{36}$/.test(id)||!env.BUCKET)return new Response(null,{status:404});const image=await env.BUCKET.get('avatars/'+id);if(!image)return new Response(null,{status:404});return new Response(image.body,{headers:{'Content-Type':'image/jpeg','X-Content-Type-Options':'nosniff','Cache-Control':'public,max-age=86400','Content-Security-Policy':"default-src 'none'; sandbox"}});}

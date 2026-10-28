@@ -27,7 +27,7 @@ const chatId=crypto.randomUUID();await post('chat',host,{text:'Test message',req
 await post('openVote',host);const spy=views[spyIndex].me;const crew=views.find(v=>v.role==='crewmate').me;
 await Promise.all(seats.map((s,i)=>post('vote',s,{target:i===spyIndex?crew:spy})));
 const result=await get(host);assert.equal(result.phase,'result');assert.equal(result.winner,'Crewmates');assert.equal(result.word,word);
-await post('lobby',host);await Promise.all(seats.map(s=>post('ready',s)));await post('start',host);await post('skip',host);
+await post('lobby',host);await Promise.all(seats.map(s=>post('ready',s)));await post('start',host);await post('skip',host,{},false);
 views=await Promise.all(seats.map(get));assert.equal(views[0].phase,'clue');assert.equal(views.filter(v=>v.role==='imposter').length,1);
 await Promise.all(seats.map(s=>post('clue',s,{text:'association'})));await post('openVote',host);await Promise.all(seats.map(s=>post('vote',s,{target:'skip'})));
 assert.equal((await get(host)).round,2);assert.equal((await get(host)).phase,'clue');
