@@ -1,3 +1,8 @@
+Undercover is a multiplayer social deduction game you can play instantly in any browser, where crewmates share clues about a secret word while imposters try to blend in without being discovered. 
+What was most challenging for me was ensuring the website was as user-friendly as possible. 
+I found testing the website's capabilities fun, and I learned how to better incorporate AI with coding. 
+My next step for this game is to create custom AI-generated secret words based on user prompts.
+
 # vinext-starter
 
 A clean full-stack starter running on [vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and Drizzle support.
