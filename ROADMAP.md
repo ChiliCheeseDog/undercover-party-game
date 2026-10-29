@@ -30,3 +30,6 @@ Recommended 4–10 players; two-player practice; technical limit 64 seats; rooms
 - `npx tsc --noEmit`; Sites production build; desktop/mobile browser checks.
 
 Rollback details are in ROLLBACK.md. Version 1 is retained unchanged.
+
+## Interaction polish
+Soft red leave button and logo-based room exit confirmation. Shared Web Audio cues for actions and game phases, default-on with a persistent header mute button. Sound starts after user interaction, stays silent in background tabs, and uses short low-gain envelopes. Button press ripples, hover feedback, staggered cards, reveal and dialog transitions honor reduced motion. No game rules, server state, or storage schema changed.
